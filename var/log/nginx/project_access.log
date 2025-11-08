@@ -2,3 +2,5 @@
 146.75.2.132 - - [08/Nov/2025:14:41:33 +0000] "GET /lessons/ HTTP/1.1" 200 162 "http://localhost:8980/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 146.75.2.132 - - [08/Nov/2025:14:46:16 +0000] "GET /lessons/ HTTP/1.1" 200 279 "http://localhost:8980/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 146.75.2.132 - - [08/Nov/2025:14:46:18 +0000] "GET /lessons/multiplicationTable.php HTTP/1.1" 200 2704 "http://localhost:8980/lessons/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+146.75.2.132 - - [08/Nov/2025:14:47:36 +0000] "GET /lessons/ HTTP/1.1" 200 391 "http://localhost:8980/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+146.75.2.132 - - [08/Nov/2025:14:47:37 +0000] "GET /lessons/arrayOfProducts.php HTTP/1.1" 200 256 "http://localhost:8980/lessons/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
