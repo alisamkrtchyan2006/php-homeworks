@@ -1,0 +1,28 @@
+services:
+    learning-php:
+        container_name: learning-php
+        build: .docker
+        ports:
+            - "9900:9000"
+        volumes:
+            - ./.docker/conf/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+            - ./:/var/www/html
+        networks:
+            - learning-network
+
+    nginx:
+        container_name: learning-nginx
+        image: nginx
+        volumes:
+            - ./.docker/conf/nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - ./:/var/www/html
+            - ./var/log/nginx:/var/log/nginx/
+        ports:
+            - "8980:80"
+        depends_on:
+            - learning-php
+        networks:
+            - learning-network
+networks:
+    learning-network:
+        driver: bridge
