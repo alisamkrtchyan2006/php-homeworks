@@ -1,0 +1,1 @@
+2025/11/22 15:16:35 [error] 29#29: *31 directory index of "/var/www/html/lessons/" is forbidden, client: 192.168.65.1, server: localhost, request: "POST /lessons/ HTTP/1.1", host: "localhost:8980", referrer: "http://localhost:8980/lessons/"
