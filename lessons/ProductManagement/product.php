@@ -16,7 +16,6 @@ $productService = new ProductServices();
 $action = $_POST['action'] ?? null;
 $message = '';
 
-/* -------------------- CREATE -------------------- */
 if ($action === 'create') {
     $name = helperFunction($_POST['name'] ?? '');
     $categoryId = helperFunction($_POST['category_id'] ?? '');
@@ -36,7 +35,6 @@ if ($action === 'create') {
     }
 }
 
-/* -------------------- UPDATE -------------------- */
 if ($action === 'update') {
     $id = helperFunction($_POST['id'] ?? '');
     $name = helperFunction($_POST['name'] ?? '');
@@ -57,7 +55,6 @@ if ($action === 'update') {
     }
 }
 
-/* -------------------- DELETE -------------------- */
 if ($action === 'delete') {
     $id = helperFunction($_POST['id'] ?? '');
     if ($id) {
@@ -66,7 +63,6 @@ if ($action === 'delete') {
     }
 }
 
-/* -------------------- FILTER (POST ONLY) -------------------- */
 if ($action === 'filter') {
     $filters = [
         'name'         => helperFunction($_POST['name'] ?? ''),
@@ -94,14 +90,9 @@ if ($action === 'filter') {
 $products = $productService->filter($filters);
 $categories = $categoryService->getCategoriesFromCsv();
 
-/* -------------------------------------------------------------
-   HTML OUTPUT
---------------------------------------------------------------*/
-
 echo '<h1>Products</h1>';
 echo '<p><a href="index.php">Back</a> | <a href="category.php">Categories</a></p>';
 
-/* --------------- CREATE PRODUCT FORM --------------- */
 echo '<h2>Create Product</h2>';
 echo '<form method="post">
         <input type="hidden" name="action" value="create">
@@ -118,8 +109,6 @@ echo '</select>
         <input type="number" name="quantity" placeholder="Quantity" required>
         <button type="submit">Create</button>
     </form>';
-
-/* -------------------- FILTER FORM (POST) -------------------- */
 
 echo '<h2>Filters</h2>
 <form method="post" style="margin-bottom:14px">
