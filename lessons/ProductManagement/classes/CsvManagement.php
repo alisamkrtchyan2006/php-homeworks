@@ -11,44 +11,62 @@ class CsvManagement
         $this->filePath = $filePath;
 
         if (!file_exists($this->filePath)) {
-            file_put_contents($this->filePath, '');
+            if (file_put_contents($this->filePath, '') === false) {
+                throw new FileWriteException("Failed to create file: {$this->filePath}");
+            }
         }
     }
 
     public function readCsv(): array
     {
+        if (!file_exists($this->filePath)) {
+            throw new FileNotFoundException("File not found: {$this->filePath}");
+        }
+
         if (!is_readable($this->filePath)) {
-            return [];
+            throw new FileReadException("The file is not available for reading: {$this->filePath}");
+        }
+
+        $handle = fopen($this->filePath, 'r');
+        if ($handle === false) {
+            throw new FileReadException("Failed to open file for reading: {$this->filePath}");
         }
 
         $rows = [];
-        if (($handle = fopen($this->filePath, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 0, ",", '"', "\\")) !== false) {
-                $rows[] = $data;
-            }
-            fclose($handle);
+
+        while (($data = fgetcsv($handle, 0, ",", '"', "\\")) !== false) {
+            $rows[] = $data;
         }
+
+        fclose($handle);
         return $rows;
     }
 
     public function writeCsv(array $data): void
     {
-        if (($handle = fopen($this->filePath, 'w')) !== false) {
-            foreach ($data as $row) {
-                $rowToWrite = array_map(function($item) {
-                    if (is_object($item)) {
-                        if (method_exists($item, 'getName')) {
-                            return $item->getName(); 
-                        }
-                        return (string)$item;
-                    }
-                    return $item;
-                }, $row);
+        $handle = fopen($this->filePath, 'w');
 
-                fputcsv($handle, $rowToWrite, ",", '"', "\\");
-            }
-            fclose($handle);
+        if ($handle === false) {
+            throw new FileWriteException("Failed to open file for writing: {$this->filePath}");
         }
-    }
 
+        foreach ($data as $row) {
+            $rowToWrite = array_map(function($item) {
+                if (is_object($item)) {
+                    if (method_exists($item, 'getName')) {
+                        return $item->getName();
+                    }
+                    return (string)$item;
+                }
+                return $item;
+            }, $row);
+
+            if (fputcsv($handle, $rowToWrite, ",", '"', "\\") === false) {
+                fclose($handle);
+                throw new FileWriteException("Error writing to CSV: {$this->filePath}");
+            }
+        }
+
+        fclose($handle);
+    }
 }

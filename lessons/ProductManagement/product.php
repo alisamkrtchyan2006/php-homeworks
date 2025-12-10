@@ -2,93 +2,90 @@
 
 declare(strict_types=1);
 
-include_once 'classes/CategoryServices.php';
-include_once 'classes/ProductServices.php';
+require_once 'spl_autoload_register.php';
+require_once __DIR__ . '/iface/exceptions.php'; 
 
-function helperFunction($value): string
-{
-    return htmlspecialchars(trim((string)$value));
-}
+$categoryService = new CategoryService();
+$productService  = new ProductService();
 
-$categoryService = new CategoryServices();
-$productService = new ProductServices();
-
-$action = $_POST['action'] ?? null;
+$action  = $_POST['action'] ?? null;
 $message = '';
+$filters = [];
 
-if ($action === 'create') {
-    $name = helperFunction($_POST['name'] ?? '');
-    $categoryId = helperFunction($_POST['category_id'] ?? '');
-    $price = (int)helperFunction($_POST['price'] ?? '0');
-    $quantity = (int)helperFunction($_POST['quantity'] ?? '0');
+try {
 
-    if ($name === '' || $categoryId === '') {
-        $message = 'Name and Category cannot be empty.';
-    } else {
-        $category = $categoryService->findById($categoryId);
-        if ($category === null) {
-            $message = 'Invalid category selected.';
-        } else {
-            $productService->create($name, $category, $price, $quantity);
-            $message = 'Product created successfully.';
-        }
+    if ($action === 'create') {
+        $productService->create(
+            trim((string)$_POST['name'] ?? ''),
+            trim((string)$_POST['category_id'] ?? ''),
+            (float)($_POST['price'] ?? 0),
+            (int)($_POST['quantity'] ?? 0)
+        );
+
+        $message = 'Product created successfully.';
     }
-}
 
-if ($action === 'update') {
-    $id = helperFunction($_POST['id'] ?? '');
-    $name = helperFunction($_POST['name'] ?? '');
-    $categoryId = helperFunction($_POST['category_id'] ?? '');
-    $price = (int)helperFunction($_POST['price'] ?? '0');
-    $quantity = (int)helperFunction($_POST['quantity'] ?? '0');
+    if ($action === 'update') {
+        $productService->update(
+            trim((string)$_POST['id'] ?? ''),
+            trim((string)$_POST['name'] ?? ''),
+            trim((string)$_POST['category_id'] ?? ''),
+            (float)($_POST['price'] ?? 0),
+            (int)($_POST['quantity'] ?? 0)
+        );
 
-    if ($id === '' || $name === '' || $categoryId === '') {
-        $message = 'ID, Name and Category cannot be empty.';
-    } else {
-        $category = $categoryService->findById($categoryId);
-        if ($category === null) {
-            $message = 'Invalid category selected.';
-        } else {
-            $productService->update($id, $name, $category, $price, $quantity);
-            $message = 'Product updated successfully.';
-        }
+        $message = 'Product updated successfully.';
     }
-}
 
-if ($action === 'delete') {
-    $id = helperFunction($_POST['id'] ?? '');
-    if ($id) {
-        $productService->delete($id);
+    if ($action === 'delete') {
+        $productService->delete(trim((string)$_POST['id'] ?? ''));
         $message = 'Product deleted successfully.';
     }
+
+    if ($action === 'filter') {
+        $filters = [
+            'name'         => trim((string)($_POST['name'] ?? '')),
+            'category'     => trim((string)($_POST['category'] ?? '')),
+            'min_price'    => trim((string)($_POST['price_min'] ?? '')),
+            'max_price'    => trim((string)($_POST['price_max'] ?? '')),
+            'min_quantity' => trim((string)($_POST['qty_min'] ?? '')),
+            'max_quantity' => trim((string)($_POST['qty_max'] ?? '')),
+            'sort_field'   => trim((string)($_POST['sort_field'] ?? '')),
+            'sort_dir'     => trim((string)($_POST['sort_dir'] ?? 'ASC')),
+        ];
+    } else {
+        $filters = [
+            'name' => '',
+            'category' => '',
+            'min_price' => '',
+            'max_price' => '',
+            'min_quantity' => '',
+            'max_quantity' => '',
+            'sort_field' => '',
+            'sort_dir' => 'ASC',
+        ];
+    }
+
+} catch (ValidationException $e) {
+    $message = 'Validation error: ' . $e->getMessage();
+} catch (CategoryNotFoundException $e) {
+    $message = 'Category error: ' . $e->getMessage();
+} catch (ProductNotFoundException $e) {
+    $message = 'Product error: ' . $e->getMessage();
+} catch (IFileException $e) {
+    $message = 'Internal file error: ' . $e->getMessage();
+} catch (Exception $e) {
+    $message = 'Unknown error: ' . $e->getMessage();
 }
 
-if ($action === 'filter') {
-    $filters = [
-        'name'         => helperFunction($_POST['name'] ?? ''),
-        'category'     => helperFunction($_POST['category'] ?? ''),
-        'min_price'    => helperFunction($_POST['price_min'] ?? ''),
-        'max_price'    => helperFunction($_POST['price_max'] ?? ''),
-        'min_quantity' => helperFunction($_POST['qty_min'] ?? ''),
-        'max_quantity' => helperFunction($_POST['qty_max'] ?? ''),
-        'sort_field'   => helperFunction($_POST['sort_field'] ?? ''),
-        'sort_dir'     => helperFunction($_POST['sort_dir'] ?? 'ASC'),
-    ];
-} else {
-    $filters = [
-        'name' => '',
-        'category' => '',
-        'min_price' => '',
-        'max_price' => '',
-        'min_quantity' => '',
-        'max_quantity' => '',
-        'sort_field' => '',
-        'sort_dir' => 'ASC',
-    ];
+try {
+    $products   = $productService->filter($filters);
+    $categories = $categoryService->getCategoriesFromCsv();
+} catch (IFileException $e) {
+    $products = [];
+    $categories = [];
+    $message = 'Failed to load data: ' . $e->getMessage();
 }
-
-$products = $productService->filter($filters);
-$categories = $categoryService->getCategoriesFromCsv();
 
 echo '<h1>Products</h1>';
 echo '<p><a href="index.php">Back</a> | <a href="category.php">Categories</a></p>';
@@ -96,17 +93,17 @@ echo '<p><a href="index.php">Back</a> | <a href="category.php">Categories</a></p
 echo '<h2>Create Product</h2>';
 echo '<form method="post">
         <input type="hidden" name="action" value="create">
-        <input name="name" placeholder="Product name" required>
-        <select name="category_id" required>
+        <input name="name" placeholder="Product name">
+        <select name="category_id">
             <option value="">Select Category</option>';
 
 foreach ($categories as $category) {
-    echo '<option value="' . htmlspecialchars($category->id) . '">' . htmlspecialchars($category->name) . '</option>';
+    echo '<option value="' . $category->id . '">' . $category->name . '</option>';
 }
 
 echo '</select>
-        <input type="number" name="price" placeholder="Price" required>
-        <input type="number" name="quantity" placeholder="Quantity" required>
+        <input type="number" name="price" placeholder="Price">
+        <input type="number" name="quantity" placeholder="Quantity">
         <button type="submit">Create</button>
     </form>';
 
@@ -115,7 +112,7 @@ echo '<h2>Filters</h2>
   <input type="hidden" name="action" value="filter">
 
   <label>Name contains:
-    <input type="text" name="name" value="' . htmlspecialchars($filters['name']) . '">
+    <input type="text" name="name" value="' . $filters['name'] . '">
   </label>
 
   <label>Category:
@@ -124,25 +121,25 @@ echo '<h2>Filters</h2>
 
 foreach ($categories as $c) {
     $selected = ($c->id == $filters['category']) ? 'selected' : '';
-    echo '<option value="' . $c->id . '" ' . $selected . '>' . htmlspecialchars($c->name) . '</option>';
+    echo '<option value="' . $c->id . '" ' . $selected . '>' . $c->name . '</option>';
 }
 
 echo '</select></label>
 
   <label>Price >=
-    <input type="number" step="0.01" name="price_min" value="' . htmlspecialchars($filters['min_price']) . '">
+    <input type="number" step="0.01" name="price_min" value="' . $filters['min_price'] . '">
   </label>
 
   <label>Price <=
-    <input type="number" step="0.01" name="price_max" value="' . htmlspecialchars($filters['max_price']) . '">
+    <input type="number" step="0.01" name="price_max" value="' . $filters['max_price'] . '">
   </label>
 
   <label>Qty >=
-    <input type="number" name="qty_min" value="' . htmlspecialchars($filters['min_quantity']) . '">
+    <input type="number" name="qty_min" value="' . $filters['min_quantity'] . '">
   </label>
 
   <label>Qty <=
-    <input type="number" name="qty_max" value="' . htmlspecialchars($filters['max_quantity']) . '">
+    <input type="number" name="qty_max" value="' . $filters['max_quantity'] . '">
   </label>
 
   <label>Sort by:
@@ -169,7 +166,7 @@ echo '</select></label>
 
 echo '<h2>All Products</h2>';
 if ($message !== '') {
-    echo '<p>' . htmlspecialchars($message) . '</p>';
+    echo '<p>' . $message . '</p>';
 }
 
 if (count($products) === 0) {
@@ -187,18 +184,18 @@ if (count($products) === 0) {
 
     foreach ($products as $product) {
         echo '<tr>
-                <td>' . htmlspecialchars($product->id) . '</td>
-                <td>' . htmlspecialchars($product->name) . '</td>
-                <td>' . htmlspecialchars($product->category->name) . '</td>
-                <td>' . htmlspecialchars((string)$product->price) . '</td>
-                <td>' . htmlspecialchars((string)$product->quantity) . '</td>
+                <td>' . $product->id . '</td>
+                <td>' . $product->name . '</td>
+                <td>' . $product->category->name . '</td>
+                <td>' . (string)$product->price . '</td>
+                <td>' . (string)$product->quantity . '</td>
                 <td>
                     <form method="post" style="display:inline;">
                         <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="id" value="' . htmlspecialchars($product->id) . '">
-                        <input name="name" value="' . htmlspecialchars($product->name) . '" required>
+                        <input type="hidden" name="id" value="' . $product->id . '">
+                        <input name="name" value="' . $product->name . '">
 
-                        <select name="category_id" required>';
+                        <select name="category_id">';
         foreach ($categories as $cat) {
             $sel = ($cat->id === $product->category->id) ? 'selected' : '';
             echo '<option value="' . $cat->id . '" ' . $sel . '>' . $cat->name . '</option>';
@@ -206,13 +203,13 @@ if (count($products) === 0) {
 
         echo '</select>
 
-                        <input type="number" name="price" value="' . htmlspecialchars((string)$product->price) . '" required>
-                        <input type="number" name="quantity" value="' . htmlspecialchars((string)$product->quantity) . '" required>
+                        <input type="number" name="price" value="' . (string)$product->price . '">
+                        <input type="number" name="quantity" value="' . (string)$product->quantity . '">
                         <button type="submit">Update</button>
                     </form>
                     <form method="post" style="display:inline;">
                         <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="' . htmlspecialchars($product->id) . '">
+                        <input type="hidden" name="id" value="' . $product->id . '">
                         <button type="submit">Delete</button>
                     </form>
 
