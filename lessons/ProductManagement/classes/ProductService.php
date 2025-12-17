@@ -69,7 +69,7 @@ class ProductService
             throw new ValidationException("Price and Quantity must be non-negative.");
         }
         
-        $category = $this->categoryService->getCategoryById($categoryId);
+        $category = $this->categoryService->findById($categoryId);
         if (!$category) {
             throw new CategoryNotFoundException("Category not found.");
         }
@@ -77,15 +77,21 @@ class ProductService
         $product = new Product(
             uniqid(),
             $name,
-            $category->id,
-            $price,
+            $category,
+            (int)$price,
             $quantity
         );
 
-        $this->csv->append($product->toCsv());
+        $this->csvManagement->appendCsv([
+            $product->id,
+            $product->name,
+            $product->category->id,
+            (string)$product->price,
+            (string)$product->quantity
+        ]);
     }
 
-    public function update(string $id, string $name, Category $category, int $price, int $quantity): bool
+    public function update(string $id, string $name, string $categoryId, float $price, int $quantity): bool
     {
         if ($name === '') {
             throw new ValidationException("Name cannot be empty.");
@@ -95,6 +101,7 @@ class ProductService
             throw new ValidationException("Price and Quantity must be non-negative.");
         }
 
+        $category = $this->categoryService->findById($categoryId);
         $all = $this->getProductsFromCsv();
 
         $found = false;
@@ -104,7 +111,7 @@ class ProductService
                 $found = true;
                 $product->name = $name;
                 $product->category = $category;
-                $product->price = $price;
+                $product->price = (int)$price;
                 $product->quantity = $quantity;
                 break;
             }

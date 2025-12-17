@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Main page</title>
+    </head>
+    <body>
+        <h1>Products</h1>
+
+        <input id="pName" placeholder="Name">
+        <select id="pCat"></select>
+        <input id="pPrice" type="number" placeholder="Price">
+        <input id="pQty" type="number" placeholder="Qty">
+        <button onclick="createProduct()">Add</button>
+
+        <div>
+          <input type="text" id="fName" placeholder="Search name">
+          <select id="fCategory">
+            <option value="">All categories</option>
+          </select>
+          <input type="number" id="fMinPrice" placeholder="Min Price">
+          <input type="number" id="fMaxPrice" placeholder="Max Price">
+          <input type="number" id="fMinQty" placeholder="Min Quantity">
+          <input type="number" id="fMaxQty" placeholder="Max Quantity">
+
+          <select id="sortField">
+            <option value="">Sort by</option>
+            <option value="id">ID</option>
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+            <option value="price">Price</option>
+            <option value="quantity">Quantity</option>
+          </select>
+          <select id="sortDir">
+            <option value="ASC">ASC</option>
+            <option value="DESC">DESC</option>
+          </select>
+
+          <button id="applyFilters">Apply</button>
+          <button id="clearFilters">Clear</button>
+        </div>
+
+        <table border="1">
+        <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Quantity</th><th>Actions</th></tr></thead>
+        <tbody id="productList"></tbody>
+        </table>
+
+        <a href="index.html">Go to home</a>
+
+
+        <script src="productApi.js"></script>
+    </body>
+</html>
