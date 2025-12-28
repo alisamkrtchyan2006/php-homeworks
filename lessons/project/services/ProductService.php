@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../dto/Product.php';
-require_once __DIR__ . '/CsvManagement.php';
-require_once __DIR__ . '/CategoryService.php';
+namespace App\Services;
+
+use App\DTO\Product;
+use App\DTO\Category;
+use App\Iface\ValidationException;
 
 class ProductService
 {
@@ -75,7 +77,7 @@ class ProductService
             $search = trim($filters['name']);
             $products = array_filter(
                 $products,
-                fn($p) => contains($p->name, $search) !== false
+                fn($p) => str_contains($p->name, $search) !== false
             );
         }
 

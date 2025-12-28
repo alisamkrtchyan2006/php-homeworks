@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../spl_autoload_register.php';
+
+use App\Services\ProductService;
+
 header('Content-Type: application/json');
-require_once __DIR__ . '/../services/ProductService.php';
 
 $service = new ProductService();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -25,16 +28,16 @@ try {
         $products = $service->filter($filters);
         echo json_encode($products);
     } elseif ($method === 'POST') {
-        $service->create($data['name'], $data['category_id'], $data['price'], $data['quantity']);
+        $service->create($data['name'], $data['category_id'], (int)$data['price'], (int)$data['quantity']);
         echo json_encode(['success'=>true]);
     } elseif ($method === 'PUT') {
-        $service->update($data['id'], $data['name'], $data['category_id'], $data['price'], $data['quantity']);
+        $service->update($data['id'], $data['name'], $data['category_id'], (int)$data['price'], (int)$data['quantity']);
         echo json_encode(['success'=>true]);
     } elseif ($method === 'DELETE') {
         $service->delete($data['id']);
         echo json_encode(['success'=>true]);
     }
-} catch (Exception $e) {
+} catch (\Exception $e) {
     http_response_code(400);
     echo json_encode(['error'=>$e->getMessage()]);
 }

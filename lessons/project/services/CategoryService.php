@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../dto/Category.php';
-require_once __DIR__ . '/CsvManagement.php';
+namespace App\Services;
+
+use App\DTO\Category;
 
 class CategoryService
 {
