@@ -1,7 +1,7 @@
 const API_BASE_URL = '../api';
 
 async function loadAllCategories() {
-    const response = await fetch(`${API_BASE_URL}/categories.php`);
+    const response = await fetch(`${API_BASE_URL}/category.php`);
     const categories = await response.json();
 
     const categoryListElement = document.getElementById('catList');
@@ -33,7 +33,7 @@ async function createCategory() {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/categories.php`, {
+    await fetch(`${API_BASE_URL}/category.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: categoryName })
@@ -50,7 +50,7 @@ async function editExistingCategory(categoryId, currentName) {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/categories.php`, {
+    await fetch(`${API_BASE_URL}/category.php`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: categoryId, name: newName.trim() })
@@ -65,7 +65,7 @@ async function deleteExistingCategory(categoryId) {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/categories.php`, {
+    await fetch(`${API_BASE_URL}/category.php`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: categoryId })

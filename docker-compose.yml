@@ -1,28 +1,54 @@
 services:
     learning-php:
-        container_name: learning-php
+        container_name: learning-php-two
         build: .docker
         ports:
-            - "9900:9000"
+            - "9901:9000"
         volumes:
             - ./.docker/conf/php/php.ini:/usr/local/etc/php/conf.d/php.ini
             - ./:/var/www/html
+        environment:
+            MYSQL_HOST: mysql
+            MYSQL_PORT: "3306"
+            MYSQL_DATABASE: learning
+            MYSQL_USER: admin
+            MYSQL_PASSWORD: root12
+        depends_on:
+            - mysql
         networks:
             - learning-network
 
     nginx:
-        container_name: learning-nginx
+        container_name: learning-nginx-two
         image: nginx
         volumes:
             - ./.docker/conf/nginx/default.conf:/etc/nginx/conf.d/default.conf
             - ./:/var/www/html
             - ./var/log/nginx:/var/log/nginx/
         ports:
-            - "8980:80"
+            - "8981:80"
         depends_on:
             - learning-php
+        networks:
+            - learning-network
+    
+    mysql:
+        container_name: learning-mysql
+        image: mysql:8.4
+        environment:
+            MYSQL_DATABASE: learning
+            MYSQL_ROOT_PASSWORD: root12
+            MYSQL_USER: admin
+            MYSQL_PASSWORD: root12
+            MYSQL_ROOT_HOST: '%'
+        ports:
+            - "3316:3306"
+        volumes:
+            - mysql_data:/var/lib/mysql
         networks:
             - learning-network
 networks:
     learning-network:
         driver: bridge
+volumes:
+    mysql_data:

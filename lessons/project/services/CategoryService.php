@@ -5,66 +5,56 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTO\Category;
+use App\Database\Connection;
+use PDO;
 
 class CategoryService
 {
-    private CsvManagement $csvManagement;
+    private PDO $pdo;
 
-    public function __construct(string $file = __DIR__ . '/../csv/categories.csv')
+    public function __construct(?PDO $pdo = null)
     {
-        $this->csvManagement = new CsvManagement($file);
+        $this->pdo = $pdo ?? Connection::getInstance();
     }
 
-    public function getCategoriesFromCsv(): array
+    public function getCategories(): array
     {
-        $data = $this->csvManagement->readCsv();
+        $stmt = $this->pdo->query("SELECT id, name FROM categories ORDER BY id");
         $categories = [];
-        foreach ($data as [$id, $name]) {
-            $categories[] = new Category($id, $name);
+        while ($row = $stmt->fetch()) {
+            $categories[] = new Category((string)$row['id'], $row['name']);
         }
         return $categories;
     }
 
     public function createCategory(string $name): Category
     {
-        $all = $this->getCategoriesFromCsv();
-        $ids = array_map(fn($c) => (int)$c->id, $all);
-        $id = $ids ? (string)(max($ids) + 1) : '1';
-        $cat = new Category($id, $name);
-        $all[] = $cat;
-        $this->saveAll($all);
-        return $cat;
+        $stmt = $this->pdo->prepare("INSERT INTO categories (name) VALUES (?)");
+        $stmt->execute([$name]);
+        $id = (string)$this->pdo->lastInsertId();
+        return new Category($id, $name);
     }
 
-    public function updateCategory(string $id, string $name)
+    public function updateCategory(string $id, string $name): void
     {
-        $all = $this->getCategoriesFromCsv();
-        foreach ($all as $c) {
-            if ($c->id === $id) {
-                $c->name = $name;
-            }
-        }
-        $this->saveAll($all);
+        $stmt = $this->pdo->prepare("UPDATE categories SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $id]);
     }
 
-    public function deleteCategory(string $id)
+    public function deleteCategory(string $id): void
     {
-        $all = $this->getCategoriesFromCsv();
-        $new = array_filter($all, fn($c) => $c->id !== $id);
-        $this->saveAll(array_values($new));
-    }
-
-    private function saveAll(array $categories)
-    {
-        $data = array_map(fn($c) => [$c->id, $c->name], $categories);
-        $this->csvManagement->writeCsv($data);
+        $stmt = $this->pdo->prepare("DELETE FROM categories WHERE id = ?");
+        $stmt->execute([$id]);
     }
 
     public function findById(string $id): ?Category
     {
-        foreach ($this->getCategoriesFromCsv() as $c) {
-            if ($c->id === $id) return $c;
+        $stmt = $this->pdo->prepare("SELECT id, name FROM categories WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
         }
-        return null;
+        return new Category((string)$row['id'], $row['name']);
     }
 }

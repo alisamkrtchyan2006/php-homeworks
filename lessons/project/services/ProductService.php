@@ -6,158 +6,151 @@ namespace App\Services;
 
 use App\DTO\Product;
 use App\DTO\Category;
+use App\Database\Connection;
 use App\Iface\ValidationException;
+use PDO;
 
 class ProductService
 {
-    private CsvManagement $csvManagement;
+    private PDO $pdo;
     private CategoryService $categoryService;
 
-    public function __construct(string $file = __DIR__ . '/../csv/products.csv')
+    public function __construct(?PDO $pdo = null, ?CategoryService $categoryService = null)
     {
-        $this->csvManagement = new CsvManagement($file);
-        $this->categoryService = new CategoryService();
+        $this->pdo = $pdo ?? Connection::getInstance();
+        $this->categoryService = $categoryService ?? new CategoryService($this->pdo);
     }
 
-    public function getProductsFromCsv(): array
+    public function getProducts(): array
     {
-        $data = $this->csvManagement->readCsv();
+        $stmt = $this->pdo->query("
+            SELECT p.id, p.name, p.category_id, p.price, p.quantity
+            FROM products p
+            ORDER BY p.id
+        ");
         $products = [];
-        foreach ($data as [$id, $name, $catId, $price, $qty]) {
-            $cat = $this->categoryService->findById($catId);
+        while ($row = $stmt->fetch()) {
+            $cat = $this->categoryService->findById((string)$row['category_id']);
             if ($cat) {
-                $products[] = new Product($id, $name, $cat, (int)$price, (int)$qty);
+                $products[] = new Product(
+                    $row['id'],
+                    $row['name'],
+                    $cat,
+                    (int)$row['price'],
+                    (int)$row['quantity']
+                );
             }
         }
         return $products;
     }
 
-    public function create(string $name, string $categoryId, int $price, int $quantity)
+    public function create(string $name, string $categoryId, int $price, int $quantity): void
     {
         $cat = $this->categoryService->findById($categoryId);
-        $products = $this->getProductsFromCsv();
-        $id = uniqid();
-        $products[] = new Product($id, $name, $cat, $price, $quantity);
-        $this->saveAll($products);
-    }
-
-    public function update(string $id, string $name, string $categoryId, int $price, int $quantity)
-    {
-        $cat = $this->categoryService->findById($categoryId);
-        $all = $this->getProductsFromCsv();
-        foreach ($all as $p) {
-            if ($p->id === $id) {
-                $p->name = $name;
-                $p->category = $cat;
-                $p->price = $price;
-                $p->quantity = $quantity;
-            }
+        if (!$cat) {
+            throw new ValidationException("Category not found.");
         }
-        $this->saveAll($all);
+        $id = $this->generateId();
+        $stmt = $this->pdo->prepare("
+            INSERT INTO products (id, name, category_id, price, quantity)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$id, $name, $categoryId, $price, $quantity]);
     }
 
-    public function delete(string $id)
+    public function update(string $id, string $name, string $categoryId, int $price, int $quantity): void
     {
-        $all = $this->getProductsFromCsv();
-        $new = array_filter($all, fn($p) => $p->id !== $id);
-        $this->saveAll(array_values($new));
+        $cat = $this->categoryService->findById($categoryId);
+        if (!$cat) {
+            throw new ValidationException("Category not found.");
+        }
+        $stmt = $this->pdo->prepare("
+            UPDATE products SET name = ?, category_id = ?, price = ?, quantity = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$name, $categoryId, $price, $quantity, $id]);
     }
 
-    private function saveAll(array $products)
+    public function delete(string $id): void
     {
-        $data = array_map(fn($p) => [$p->id, $p->name, $p->category->id, $p->price, $p->quantity], $products);
-        $this->csvManagement->writeCsv($data);
+        $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = ?");
+        $stmt->execute([$id]);
     }
 
     public function filter(array $filters): array
     {
-        $products = $this->getProductsFromCsv();
+        $sql = "SELECT p.id, p.name, p.category_id, p.price, p.quantity, c.name AS category_name
+                FROM products p
+                INNER JOIN categories c ON p.category_id = c.id
+                WHERE 1=1";
+        $params = [];
 
-        if ($filters['name'] ?? '' !== '') {
-            $search = trim($filters['name']);
-            $products = array_filter(
-                $products,
-                fn($p) => str_contains($p->name, $search) !== false
-            );
+        if (($filters['name'] ?? '') !== '') {
+            $sql .= " AND p.name LIKE ?";
+            $params[] = '%' . trim($filters['name']) . '%';
         }
 
         if (($filters['category'] ?? '') !== '') {
-            $catId = $filters['category'];
-            $products = array_filter(
-                $products,
-                fn($p) => $p->category->id === $catId
-            );
+            $sql .= " AND p.category_id = ?";
+            $params[] = $filters['category'];
         }
 
         if (($filters['min_price'] ?? '') !== '') {
             if (!is_numeric($filters['min_price'])) {
                 throw new ValidationException("Min price must be numeric.");
             }
-            $min = (int)$filters['min_price'];
-            $products = array_filter($products, fn($p) => $p->price >= $min);
+            $sql .= " AND p.price >= ?";
+            $params[] = (int)$filters['min_price'];
         }
 
         if (($filters['max_price'] ?? '') !== '') {
             if (!is_numeric($filters['max_price'])) {
                 throw new ValidationException("Max price must be numeric.");
             }
-            $max = (int)$filters['max_price'];
-            $products = array_filter($products, fn($p) => $p->price <= $max);
+            $sql .= " AND p.price <= ?";
+            $params[] = (int)$filters['max_price'];
         }
 
         if (($filters['min_quantity'] ?? '') !== '') {
             if (!is_numeric($filters['min_quantity'])) {
                 throw new ValidationException("Min quantity must be numeric.");
             }
-            $min = (int)$filters['min_quantity'];
-            $products = array_filter($products, fn($p) => $p->quantity >= $min);
+            $sql .= " AND p.quantity >= ?";
+            $params[] = (int)$filters['min_quantity'];
         }
 
         if (($filters['max_quantity'] ?? '') !== '') {
             if (!is_numeric($filters['max_quantity'])) {
                 throw new ValidationException("Max quantity must be numeric.");
             }
-            $max = (int)$filters['max_quantity'];
-            $products = array_filter($products, fn($p) => $p->quantity <= $max);
+            $sql .= " AND p.quantity <= ?";
+            $params[] = (int)$filters['max_quantity'];
         }
 
-        if (($filters['sort_field'] ?? '') !== '') {
-            $dir = $filters['sort_dir'] ?? 'ASC';
-            $products = $this->sort($products, $filters['sort_field'], $dir);
+        $sortField = $filters['sort_field'] ?? '';
+        $sortDir = strtoupper($filters['sort_dir'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
+
+        $allowedSort = ['id' => 'p.id', 'name' => 'p.name', 'category' => 'c.name', 'price' => 'p.price', 'quantity' => 'p.quantity'];
+        if ($sortField !== '' && isset($allowedSort[$sortField])) {
+            $sql .= " ORDER BY " . $allowedSort[$sortField] . " " . $sortDir;
+        } else {
+            $sql .= " ORDER BY p.id";
         }
 
-        return array_values($products);
-    }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
-    public function sort(array $products, string $field, string $dir = 'ASC'): array
-    {
-        $allowed = ['id', 'name', 'category', 'price', 'quantity'];
-
-        if (!in_array($field, $allowed)) {
-            throw new ValidationException("Invalid sort field: '$field'.");
+        $products = [];
+        while ($row = $stmt->fetch()) {
+            $cat = new Category((string)$row['category_id'], $row['category_name']);
+            $products[] = new Product(
+                $row['id'],
+                $row['name'],
+                $cat,
+                (int)$row['price'],
+                (int)$row['quantity']
+            );
         }
-
-        $dir = strtoupper($dir) === 'DESC' ? 'DESC' : 'ASC';
-        $n = count($products);
-
-        for ($i = 0; $i < $n - 1; $i++) {
-            for ($j = 0; $j < $n - $i - 1; $j++) {
-                $va = ($field === 'category') ? $products[$j]->category->name : $products[$j]->$field;
-                $vb = ($field === 'category') ? $products[$j + 1]->category->name : $products[$j + 1]->$field;
-
-                $cmp = in_array($field, ['id', 'price', 'quantity'])
-                    ? ($va <=> $vb)
-                    : strcasecmp((string)$va, (string)$vb);
-
-                if (($dir === 'ASC' && $cmp > 0) || ($dir === 'DESC' && $cmp < 0)) {
-                    $temp = $products[$j];
-                    $products[$j] = $products[$j + 1];
-                    $products[$j + 1] = $temp;
-                }
-            }
-        }
-
         return $products;
     }
-
 }

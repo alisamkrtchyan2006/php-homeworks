@@ -15,8 +15,7 @@ RUN apt-get update && apt-get install -y libxml2-dev \
     &&  rm -rf /tmp/pear \
     && docker-php-ext-enable opcache\
     && docker-php-ext-configure zip \
-    && docker-php-ext-install -j$(nproc) pgsql \
-    && docker-php-ext-install -j$(nproc) pdo_pgsql\
+    && docker-php-ext-install -j$(nproc) pdo_mysql\
     && docker-php-ext-install -j$(nproc)  intl zip;
 
 RUN curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php

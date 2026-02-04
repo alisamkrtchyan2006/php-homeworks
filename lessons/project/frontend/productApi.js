@@ -1,7 +1,7 @@
 const API_BASE_URL = '../api';
 
 async function loadAllCategories() {
-    const response = await fetch(`${API_BASE_URL}/categories.php`);
+    const response = await fetch(`${API_BASE_URL}/category.php`);
     const categories = await response.json();
 
     const productCategorySelect = document.getElementById('pCat');
@@ -32,7 +32,7 @@ function isValidNumber(value) {
 
 async function loadAllProducts(filters = {}) {
     const queryString = new URLSearchParams(filters).toString();
-    const response = await fetch(`${API_BASE_URL}/products.php?${queryString}`);
+    const response = await fetch(`${API_BASE_URL}/product.php?${queryString}`);
     const products = await response.json();
 
     const productTableBody = document.getElementById('productList');
@@ -76,7 +76,7 @@ async function createProduct() {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/products.php`, {
+    await fetch(`${API_BASE_URL}/product.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,7 +109,7 @@ async function editExistingProduct(product) {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/products.php`, {
+    await fetch(`${API_BASE_URL}/product.php`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,7 +130,7 @@ async function deleteExistingProduct(productId) {
         return;
     }
 
-    await fetch(`${API_BASE_URL}/products.php`, {
+    await fetch(`${API_BASE_URL}/product.php`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: productId })

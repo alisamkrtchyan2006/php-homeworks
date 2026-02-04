@@ -5,9 +5,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/../spl_autoload_register.php';
 
 use App\Services\ProductService;
+use App\Database\Connection;
+use App\Database\Schema;
 
 header('Content-Type: application/json');
 
+Schema::createTables(Connection::getInstance());
 $service = new ProductService();
 $method = $_SERVER['REQUEST_METHOD'];
 
